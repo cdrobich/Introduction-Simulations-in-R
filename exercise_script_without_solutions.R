@@ -27,28 +27,33 @@ sample(x, size = 6, replace = TRUE)
 # YOUR TURN: generate random numbers
 ## Sample 100 values between 3 and 103 with replacement
 
-
+x <- 3:103
+x
+sample(x, size = 100, replace = TRUE)
 
 # random number generator drawing from specific distributions
 
-?runif  # runif(n, min, max) 
-?rpois  # rpois(n, lambda) 
-?rnorm  # rnorm(n, mean, sd) 
-?rbinom # rbinom(n, prob)	
+?runif  # runif(n, min, max) #uniform distribution
+?rpois  # rpois(n, lambda)  #poisson distribution
+?rnorm  # rnorm(n, mean, sd) #normal distribution
+?rbinom # rbinom(n, prob)	 #binomial distribution
 
 # YOUR TURN: generate random numbers
 ## Draw 100 values from a normal distribution with a mean of 0 and a sd of 1
 
+rnorm(100) # mean of 0 and sd of 1 = default
 
 ## Draw 50 values from a normal distribution with a mean of 10 and sd of 5
 
+rnorm(50, 10, 5)
 
 ## Draw 1000 values from a poisson distribution with a lambda of 50
 
+rpois(1000, 50)
 
 ## Draw 30 values from a uniform distribution between 0 and 10
 
-
+runif(30, 0, 10)
 
 
 # repeat 
@@ -63,10 +68,12 @@ hist(replicate(10, mean(rnorm(100))))
 # YOUR TURN: generate random numbers, repeat, and plot
 ## Replicate 1000 times the mean of 10 values drawn from a uniform distribution between 0 and 10  
 
+replicate(1000, mean(runif(10,0,10)))
+
 
 ## Replicate 100 times the mean of 50 values drawn from a normal distribution of mean 10 and standard deviation 5  
 
-
+replicate(100, mean(rnorm(50, 10, 5)))
 
 
 # set seed
@@ -169,13 +176,27 @@ abline(v = 1, col = "red", lty = 2, lwd = 2)
 # YOUR TURN: write a function that takes input "nrep", replicates '(mean(rnorm(100)))'
 # nrep times, and draws a histogram of the results
 
+replicate(1000,mean(rnorm(100)))
 
+histnorm100 <- function(nrep){
+  hist(replicate(nrep,mean(rnorm(100))))
+}
+
+histnorm100(1000)
+histnorm100(7)
+histnorm100(10)
 
 # YOUR TURN: modify your function
 ## to draw a histogram of nrep mean(rnorm(n)), where n is another input
 
+histnorm <- function(nrep, n){
+  hist(replicate(nrep, mean(rnorm(n))))
+}
 
-
+histnorm(10,5)
+histnorm(100,5)
+histnorm(1000,5)
+histnorm(10000,5)
 
 #~~~~~~~~~ Simulating no effect and check alpha -----
 
@@ -185,12 +206,32 @@ abline(v = 1, col = "red", lty = 2, lwd = 2)
 ### Figure out how to do a t.test in R  
 ### Generate two vectors of 10 values drawn from N(0,1) and compare them with a t test  
 ### Figure out how to extract the p-value from that object (HINT use `str` or `names`)
-### Write a function simT that generates two vectors of n random normals, compare them with a t test and return the p-value  
+### Write a function simT that generates two vectors of n random normals, 
+# compare them with a t test and return the p-value  
 ### Repeat with nrep = 20 and draw a histogram for n = 10
 ### Repeat with nrep = 100 and draw a histogram for n = 10    
 
+?t.test
+
+x1 <- rnorm(10, 0, 1)
+x2 <- rnorm(10, 0, 1)
+
+t.test(x1,x2)
+
+str(t.test(x1,x2))
+names(t.test(x1,x2))
+
+t.test(x1,x2)$p.value
+
+simT <- function(n){
+  y1 <- rnorm(n)
+  y2 <- rnorm(n)
+  t.test(y1,y2)$p.value
+}
 
 
+simT(1000)
+simT(10)
 
 
 #~~~~~~~~~ Simulating an effect and check power -----
@@ -206,7 +247,23 @@ power.t.test(n = NULL, delta = 0.5, sd = 1, sig.level = 0.05, power = 0.8)
 ## Then, use that function to replicate the function 1000 times using the parameters used in the power calculation.
 ## Calculate the proportion of p-values that are <0.05
 
+simT2 <- function(n, m1, m2){
+  z1 <- rnorm(n, m1)
+  z2 <- rnorm(n, m2)
+  t.test(z1,z2)$p.value
+}
 
+simT2(100, 25, 60)
+
+setseed(2004)
+
+p <- replicate(1000, simT2(64, 0, 0.5))
+
+par(mfrow = c(1,1))
+hist(p, breaks = 21, col = c('red',rep('grey',20)), 
+     main = "nrep = 1000, n = 64, delta = 0.5", xlab = 'pvalue')
+
+prop.table(table(p < 0.05))
 
 
 #~~~~~~~~~ Simulating for a preregistration  -----
@@ -223,7 +280,16 @@ power.t.test(n = NULL, delta = 0.5, sd = 1, sig.level = 0.05, power = 0.8)
 # 5            Yes         Yes   F 30.41415
 # 6             No          No   M 44.60615
 
+setseed(12345)
 
+N <- 10
+yn <- c("Yes","No")
+
+df <- data.frame(
+  smoking_status = sample(yn, N, replace = T),
+  lung_cancer = sample(yn, N, replace = T),
+  sex = sample(c("M","F"),N, replace = T),
+  age = rnorm(N, 30, 10))
 
 
 
@@ -237,5 +303,11 @@ power.t.test(n = NULL, delta = 0.5, sd = 1, sig.level = 0.05, power = 0.8)
 ## HINT: are the variables the correct data type?
 ## HINT: once the model works, use summary() to look at the results
 
+df[1:3] <- lapply(df[1:3], as.factor)
 
+m1 <- glm(
+  lung_cancer ~ smoking_status + age + sex, 
+  family = binomial(link = logit),
+  data = df)
 
+summary(m1)
